@@ -1,0 +1,21 @@
+# Dependencies
+/node_modules/
+
+# Build outputs
+frontend/dist/
+worker/public/
+
+# Environment variables
+frontend/.env
+frontend/.env.local
+
+# Service account key (NEVER commit this)
+*.json
+serviceAccountKey.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Wrangler
+.wrangler/

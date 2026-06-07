@@ -1,0 +1,18 @@
+name               = "g3-attendance-worker"
+main               = "src/index.ts"
+compatibility_date = "2024-09-01"
+
+[assets]
+directory = "./public"
+binding   = "ASSETS"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[[routes]]
+pattern   = "g3signin.johnrachwalski.com/*"
+zone_name = "johnrachwalski.com"
+
+[[routes]]
+pattern   = "g3signout.johnrachwalski.com/*"
+zone_name = "johnrachwalski.com"
