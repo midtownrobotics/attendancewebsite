@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Firestore } from './firestore';
-import { validateToken, nameToId } from './token';
+import { createSelectionGrant, validateSelectionGrant, validateToken, nameToId } from './token';
 
 const AUTO_SIGNOUT_MS = 12 * 60 * 60 * 1000;
 
@@ -43,9 +43,18 @@ function db(env: Env) {
 
 app.get('/members', async (c) => {
   try {
+    const action = c.req.query('action');
+    const w = Number(c.req.query('w'));
+    if ((action !== 'signin' && action !== 'signout') || !Number.isSafeInteger(w)) {
+      return c.json({ error: 'TOKEN_EXPIRED' }, 400);
+    }
+    try { validateToken(w); }
+    catch { return c.json({ error: 'TOKEN_EXPIRED' }, 400); }
+
     const doc = await db(c.env).getDoc('config/members');
     const names = (doc?.data.names as string[]) ?? [];
-    return c.json({ names });
+    const grant = await createSelectionGrant(action, w, c.env.FIREBASE_PRIVATE_KEY);
+    return c.json({ names, grant });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('GET /members error:', msg);
@@ -58,9 +67,9 @@ app.get('/members', async (c) => {
 ──────────────────────────── */
 
 app.post('/signin', async (c) => {
-  const { name, w } = await c.req.json<{ name: string; w: number }>();
+  const { name, grant } = await c.req.json<{ name: string; grant: string }>();
 
-  try { validateToken(w); }
+  try { await validateSelectionGrant('signin', grant, c.env.FIREBASE_PRIVATE_KEY); }
   catch { return c.json({ error: 'TOKEN_EXPIRED' }, 400); }
 
   const fs = db(c.env);
@@ -93,9 +102,9 @@ app.post('/signin', async (c) => {
 ──────────────────────────── */
 
 app.post('/signout', async (c) => {
-  const { name, w } = await c.req.json<{ name: string; w: number }>();
+  const { name, grant } = await c.req.json<{ name: string; grant: string }>();
 
-  try { validateToken(w); }
+  try { await validateSelectionGrant('signout', grant, c.env.FIREBASE_PRIVATE_KEY); }
   catch { return c.json({ error: 'TOKEN_EXPIRED' }, 400); }
 
   const fs = db(c.env);

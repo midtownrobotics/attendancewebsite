@@ -30,6 +30,7 @@ function formatDuration(ms: number): string {
 export default function SelectPage({ action, w }: Props) {
   const isSignIn = action === 'signin';
   const [status, setStatus] = useState<Status>({ kind: 'loading-names' });
+  const [grant, setGrant] = useState<string | null>(null);
 
   // Only check the token's shape here. Expiration must be decided by the API's
   // clock; using the visitor's phone clock causes valid scans to be rejected on
@@ -39,14 +40,26 @@ export default function SelectPage({ action, w }: Props) {
       setStatus({ kind: 'error', message: 'QR CODE EXPIRED\nASK FOR A FRESH SCAN' });
       return;
     }
-    fetch(`${API}/members`)
-      .then(r => r.json() as Promise<{ names: string[] }>)
-      .then(data => setStatus({ kind: 'ready', names: data.names }))
-      .catch(() => setStatus({ kind: 'error', message: 'CONNECTION ERROR\nTRY AGAIN' }));
-  }, [w]);
+    fetch(`${API}/members?action=${action}&w=${encodeURIComponent(w)}`)
+      .then(async r => {
+        const data = await r.json() as { names?: string[]; grant?: string; error?: string };
+        if (!r.ok || !data.names || !data.grant) throw new Error(data.error ?? 'LOAD_FAILED');
+        return data as { names: string[]; grant: string };
+      })
+      .then(data => {
+        setGrant(data.grant);
+        setStatus({ kind: 'ready', names: data.names });
+      })
+      .catch((error: unknown) => setStatus({
+        kind: 'error',
+        message: error instanceof Error && error.message === 'TOKEN_EXPIRED'
+          ? 'QR CODE EXPIRED\nASK FOR A FRESH SCAN'
+          : 'CONNECTION ERROR\nTRY AGAIN',
+      }));
+  }, [action, w]);
 
   async function handleSelect(name: string) {
-    if (!tokenWellFormed(w)) {
+    if (!grant) {
       setStatus({ kind: 'error', message: 'QR CODE EXPIRED\nASK FOR A FRESH SCAN' });
       return;
     }
@@ -55,7 +68,7 @@ export default function SelectPage({ action, w }: Props) {
       const res = await fetch(`${API}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, w: parseInt(w, 10) }),
+        body: JSON.stringify({ name, grant }),
       });
       const data = await res.json() as { ok?: boolean; error?: string; durationMs?: number; totalHours?: number }; if (!res.ok || data.error) {
         const msg =
