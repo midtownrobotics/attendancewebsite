@@ -123,6 +123,24 @@ app.post('/signout', async (c) => {
 
   const durationMs = Date.now() - signInMs;
 
+  // A forgotten sign-out never earns attendance time, even if the scheduled
+  // cleanup has not reached this session yet.
+  if (!Number.isFinite(signInMs) || durationMs >= AUTO_SIGNOUT_MS) {
+    await fs.updateDoc(session.path, {
+      signOut: new Date(),
+      durationMs: 0,
+      status: 'auto-closed',
+    });
+
+    const year = String(new Date().getFullYear());
+    const existing = await fs.getDoc(`members/${memberId}/totals/${year}`);
+    return c.json({
+      ok: true,
+      durationMs: 0,
+      totalHours: ((existing?.data?.totalMs as number) ?? 0) / 3_600_000,
+    });
+  }
+
   await fs.updateDoc(session.path, {
     signOut: new Date(),
     durationMs,
@@ -197,7 +215,7 @@ async function autoSignOut(env: Env) {
   await Promise.all(stale.map((session: any) => {
     return fs.updateDoc(session.path, {
       signOut: new Date(),
-      durationMs: null,
+      durationMs: 0,
       status: 'auto-closed',
     });
   }));

@@ -7,7 +7,8 @@ directory = "./public"
 binding   = "ASSETS"
 
 [triggers]
-crons = ["0 * * * *"]
+# Close forgotten sessions promptly after the 12-hour limit.
+crons = ["* * * * *"]
 
 [[routes]]
 pattern   = "g3signin.johnrachwalski.com/*"
