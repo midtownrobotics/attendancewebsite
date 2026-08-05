@@ -37,10 +37,6 @@ export default function KioskPage({ type }: Props) {
     return () => clearInterval(tick);
   }, []);
 
-  const progress = 1 - msUntilNextWindow() / WINDOW_MS;
-  const R        = 148;
-  const circ     = 2 * Math.PI * R;
-
   return (
     <div className={`kiosk kiosk--${type}`}>
       <div className="scanlines" aria-hidden="true" />
@@ -48,19 +44,6 @@ export default function KioskPage({ type }: Props) {
         <h1 className="kiosk__label">{label}</h1>
 
         <div className="kiosk__qr-wrapper">
-          <svg className="kiosk__ring" viewBox="0 0 320 320" aria-hidden="true">
-            <circle className="ring-track"    cx="160" cy="160" r={R} fill="none" strokeWidth="3" />
-            <circle
-              className="ring-progress"
-              cx="160" cy="160" r={R}
-              fill="none" strokeWidth="3"
-              strokeDasharray={circ}
-              strokeDashoffset={circ * (1 - progress)}
-              strokeLinecap="round"
-              transform="rotate(-90 160 160)"
-            />
-          </svg>
-
           <div className="kiosk__qr-frame" key={refreshKey}>
             {qrValue && (
               <QRCodeSVG
