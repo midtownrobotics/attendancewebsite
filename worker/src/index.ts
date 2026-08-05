@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { Firestore } from './firestore';
-import { createSelectionGrant, validateSelectionGrant, validateToken, nameToId } from './token';
+import { createSelectionGrant, currentWindow, validateSelectionGrant, validateToken, nameToId } from './token';
 
 const AUTO_SIGNOUT_MS = 12 * 60 * 60 * 1000;
 
@@ -36,6 +36,9 @@ function db(env: Env) {
     env.FIREBASE_PRIVATE_KEY
   );
 }
+
+/* QR timestamps must come from the same clock that validates them. */
+app.get('/qr-window', (c) => c.json({ w: currentWindow() }));
 
 /* ─────────────────────────────
    /members

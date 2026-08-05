@@ -9,23 +9,27 @@ export default function KioskPage({ type }: Props) {
   const isSignIn = type === 'signin';
   const label    = isSignIn ? 'SIGN IN' : 'SIGN OUT';
 
-  const [qrValue,     setQrValue]     = useState(() => buildQrUrl(type));
+  const [qrValue,     setQrValue]     = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(Math.ceil(msUntilNextWindow() / 1000));
   const [refreshKey,  setRefreshKey]  = useState(0);
 
-  const refreshToken = useCallback(() => {
-    setQrValue(buildQrUrl(type));
-    setRefreshKey(k => k + 1);
+  const refreshToken = useCallback(async () => {
+    try {
+      const res = await fetch('/api/qr-window', { cache: 'no-store' });
+      if (!res.ok) throw new Error('QR_WINDOW_FAILED');
+      const data = await res.json() as { w: number };
+      setQrValue(buildQrUrl(type, data.w));
+      setRefreshKey(k => k + 1);
+    } catch {
+      // Keep the last server-issued QR visible through brief network failures.
+    }
   }, [type]);
 
-  // Align refresh to exact window boundary, then repeat every 30s
+  // Fetch QR windows from Cloudflare so kiosk clock skew cannot expire scans.
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    const timeout = setTimeout(() => {
-      refreshToken();
-      interval = setInterval(refreshToken, WINDOW_MS);
-    }, msUntilNextWindow());
-    return () => { clearTimeout(timeout); clearInterval(interval); };
+    void refreshToken();
+    const interval = setInterval(() => { void refreshToken(); }, WINDOW_MS);
+    return () => clearInterval(interval);
   }, [refreshToken]);
 
   useEffect(() => {
@@ -58,13 +62,15 @@ export default function KioskPage({ type }: Props) {
           </svg>
 
           <div className="kiosk__qr-frame" key={refreshKey}>
-            <QRCodeSVG
-              value={qrValue}
-              size={220}
-              bgColor="transparent"
-              fgColor={isSignIn ? '#00ff88' : '#ff3344'}
-              level="M"
-            />
+            {qrValue && (
+              <QRCodeSVG
+                value={qrValue}
+                size={220}
+                bgColor="transparent"
+                fgColor={isSignIn ? '#00ff88' : '#ff3344'}
+                level="M"
+              />
+            )}
           </div>
         </div>
 

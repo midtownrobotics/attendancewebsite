@@ -12,7 +12,7 @@ export function msUntilNextWindow(): number {
 }
 
 /** URL encoded into the QR code — scanned by student's phone */
-export function buildQrUrl(type: PageType): string {
+export function buildQrUrl(type: PageType, qrWindow = currentWindow()): string {
   const origin = window.location.origin; // e.g. https://g3signin.johnrachwalski.com
-  return `${origin}/?action=${type}&w=${currentWindow()}`;
+  return `${origin}/?action=${type}&w=${qrWindow}`;
 }
