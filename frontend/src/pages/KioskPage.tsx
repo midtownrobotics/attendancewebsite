@@ -65,7 +65,7 @@ export default function KioskPage({ type }: Props) {
             {qrValue && (
               <QRCodeSVG
                 value={qrValue}
-                size={220}
+                size={460}
                 bgColor="transparent"
                 fgColor={isSignIn ? '#00ff88' : '#ff3344'}
                 level="M"
