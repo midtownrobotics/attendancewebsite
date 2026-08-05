@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { VALID_WINDOWS, WINDOW_MS, type PageType } from '../utils/token';
+import { type PageType } from '../utils/token';
 import './SelectPage.css';
 
 interface Props {
@@ -15,10 +15,8 @@ type Status =
 
 const API = (import.meta.env.VITE_API_URL as string) || '/api';
 
-function tokenValid(w: string): boolean {
-  const window = parseInt(w, 10);
-  const current = Math.floor(Date.now() / WINDOW_MS);
-  return !isNaN(window) && current - window <= VALID_WINDOWS && window <= current;
+function tokenWellFormed(w: string): boolean {
+  return /^\d+$/.test(w) && Number.isSafeInteger(Number(w));
 }
 
 function formatDuration(ms: number): string {
@@ -33,9 +31,11 @@ export default function SelectPage({ action, w }: Props) {
   const isSignIn = action === 'signin';
   const [status, setStatus] = useState<Status>({ kind: 'loading-names' });
 
-  // Check token age client-side before even loading names
+  // Only check the token's shape here. Expiration must be decided by the API's
+  // clock; using the visitor's phone clock causes valid scans to be rejected on
+  // devices whose clocks are even slightly out of sync.
   useEffect(() => {
-    if (!tokenValid(w)) {
+    if (!tokenWellFormed(w)) {
       setStatus({ kind: 'error', message: 'QR CODE EXPIRED\nASK FOR A FRESH SCAN' });
       return;
     }
@@ -46,7 +46,7 @@ export default function SelectPage({ action, w }: Props) {
   }, [w]);
 
   async function handleSelect(name: string) {
-    if (!tokenValid(w)) {
+    if (!tokenWellFormed(w)) {
       setStatus({ kind: 'error', message: 'QR CODE EXPIRED\nASK FOR A FRESH SCAN' });
       return;
     }
